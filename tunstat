@@ -1,30 +1,71 @@
 #!/usr/bin/env python
 
-import socket
-import commands
+import socket, commands
+from prettytable import PrettyTable
 
 class bcol:
     okgreen = '\033[32m'
     failred = '\033[91m'
     endc = '\033[0m'
-    head = '\033[94m'
+    head = '\033[97m'
 
-if commands.getoutput('pgrep -f "python /usr/local/bin/p3arm start"'):
-    print 'Keep-alive [' + bcol.okgreen + 'UP' + bcol.endc + ']'
-else:
-    print 'Keep-alive [' + bcol.failred + 'DOWN' + bcol.endc + ']'
+ok = '{0}OK{1}'.format(bcol.okgreen, bcol.endc)
+down = '{0}DOWN{1}'.format(bcol.failred, bcol.endc)
 
-tcpIP = '127.0.0.1'
-tcpPorts = {'SLC':9999, 'PHX':9997, 'LVS':9998}
-buff = 1024
+def build_table(tunnels):
+    table_status =  PrettyTable(["Location", "Status"])
+    table_status.padding_width = 1
+    for dc, status in tunnels.iteritems():
+        table_status.add_row([dc, status])
 
-print bcol.head + "Tunnel Status" + bcol.endc
+    return table_status
 
-for dc, port in tcpPorts.iteritems():
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.connect((tcpIP, port))
-        s.close()
-        print '{0} ['.format(dc) + bcol.okgreen + 'OK' + bcol.endc + ']'
-    except:
-        print '%s [' % dc + bcol.failred + 'FAIL' + bcol.endc + ']' 
+def check_status(tunnels):
+    ipaddr = '127.0.0.1'
+    buff = 1024
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    for dc, port in tunnels.iteritems():
+        try:
+            conn.connect((ipaddr, port))
+            conn.close()
+            tunnels[dc] = ok
+        except:
+            tunnels[dc] = down
+
+    return tunnels
+
+def check_keepalive():
+    if commands.getoutput('pgrep -f "python /usr/local/bin/p3arm start"'):
+        keep_color = bcol.okgreen
+        keep_status = 'RUNNING'
+    else:
+        keep_color = bcol.failred
+        keep_status = 'DOWN'
+
+    keepalive = '{3}Tunnel Keep Alive is {0}{1}{2}'.format(keep_color,keep_status,bcol.endc,bcol.head)
+
+    return keepalive
+
+if __name__ == '__main__':
+    tunnels = {'SLC':9999, 'LVS':9998, 'PHX':9997}
+    status = check_status(tunnels)
+
+    print check_keepalive()
+    print build_table(status)
+
+#if commands.getoutput('pgrep -f "python /usr/local/bin/p3arm start"'):
+#    print 'Keep-alive [' + bcol.okgreen + 'UP' + bcol.endc + ']'
+#else:
+#    print 'Keep-alive [' + bcol.failred + 'DOWN' + bcol.endc + ']'
+#tcpIP = '127.0.0.1'
+#tcpPorts = {'SLC':9999, 'PHX':9997, 'LVS':9998}
+#print bcol.head + "Tunnel Status" + bcol.endc
+#for dc, port in tcpPorts.iteritems():
+#    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#    try:
+#        s.connect((tcpIP, port))
+#        s.close()
+#        print '{0} ['.format(dc) + bcol.okgreen + 'OK' + bcol.endc + ']'
+#    except:
+#        print '%s [' % dc + bcol.failred + 'FAIL' + bcol.endc + ']'
