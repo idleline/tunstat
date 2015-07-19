@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import socket
+import commands
+
+class bcol:
+    okgreen = '\033[32m'
+    failred = '\033[91m'
+    endc = '\033[0m'
+    head = '\033[94m'
+
+if commands.getoutput('pgrep -f "python /usr/local/bin/p3arm start"'):
+    print 'Keep-alive [' + bcol.okgreen + 'UP' + bcol.endc + ']'
+else:
+    print 'Keep-alive [' + bcol.failred + 'DOWN' + bcol.endc + ']'
+
+tcpIP = '127.0.0.1'
+tcpPorts = {'SLC':9999, 'PHX':9997, 'LVS':9998}
+buff = 1024
+
+print bcol.head + "Tunnel Status" + bcol.endc
+
+for dc, port in tcpPorts.iteritems():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect((tcpIP, port))
+        s.close()
+        print '{0} ['.format(dc) + bcol.okgreen + 'OK' + bcol.endc + ']'
+    except:
+        print '%s [' % dc + bcol.failred + 'FAIL' + bcol.endc + ']' 
